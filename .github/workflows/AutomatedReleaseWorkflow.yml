@@ -98,6 +98,11 @@ jobs:
             git checkout -b $BRANCH --track origin/$BRANCH || git checkout -b $BRANCH
           fi
 
+      - name: Pull Latest Changes (to avoid non-fast-forward error)
+        run: |
+          git fetch origin $BRANCH
+          git rebase origin/$BRANCH || (git merge --strategy-option theirs && git commit --no-edit)
+
       - name: Collect Commits for Cherry-Picking
         id: collect_commits
         run: |
@@ -108,6 +113,7 @@ jobs:
             CHERRY_PICK_COMMITS=$(git log ${PREV_TAG}..HEAD --oneline | awk '{print $1}' | tr '\n' ' ')
           fi
           echo "CHERRY_PICK_COMMITS=$CHERRY_PICK_COMMITS" >> $GITHUB_ENV
+
       - name: Cherry-Pick Commits to Target Branch
         run: |
           for COMMIT in $CHERRY_PICK_COMMITS; do
