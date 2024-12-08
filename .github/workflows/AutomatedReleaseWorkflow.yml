@@ -38,6 +38,17 @@ jobs:
             echo "Salesforce CLI is already installed."
           fi
 
+      - name: Ensure SFDX Project
+        run: |
+          if [ ! -f sfdx-project.json ]; then
+            echo "sfdx-project.json not found. Initializing an SFDX project..."
+            sfdx force:project:create --projectname TempProject
+            mv TempProject/* . && mv TempProject/.* . 2>/dev/null || true
+            rmdir TempProject
+          else
+            echo "SFDX project already initialized."
+          fi
+
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Action Bot"
