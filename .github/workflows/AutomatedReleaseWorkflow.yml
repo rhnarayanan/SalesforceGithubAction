@@ -100,8 +100,12 @@ jobs:
 
       - name: Pull Latest Changes (to avoid non-fast-forward error)
         run: |
+          # Stash untracked files to avoid conflicts during rebase
+          git stash --include-untracked
           git fetch origin $BRANCH
           git rebase origin/$BRANCH || (git merge --strategy-option theirs && git commit --no-edit)
+          # Pop the stash after the rebase
+          git stash pop || echo "No changes to pop from stash"
 
       - name: Collect Commits for Cherry-Picking
         id: collect_commits
