@@ -98,6 +98,11 @@ jobs:
             git checkout -b $BRANCH --track origin/$BRANCH || git checkout -b $BRANCH
           fi
 
+      - name: Pull Latest Changes (to avoid non-fast-forward error)
+        run: |
+          git fetch origin $BRANCH
+          git rebase origin/$BRANCH || (git merge --strategy-option theirs && git commit --no-edit)
+
       - name: Collect Commits for Cherry-Picking
         id: collect_commits
         run: |
