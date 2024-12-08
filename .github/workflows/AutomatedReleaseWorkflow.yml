@@ -1,6 +1,6 @@
 name: Automated Release Workflow
 
-'on':
+on:
   workflow_dispatch:
     inputs:
       release_type:
@@ -10,7 +10,7 @@ name: Automated Release Workflow
         description: 'Target environment (dev, st1, st2, prod)'
         required: true
       commits:
-        description: Comma-separated list of commit SHAs to cherry-pick (optional)
+        description: 'Comma-separated list of commit SHAs to cherry-pick (optional)'
         required: false
 
 env:
@@ -112,7 +112,11 @@ jobs:
       - name: Authenticate Salesforce Org (JWT)
         run: |
           echo "Authenticating with Salesforce Org..."
-          sfdx force:auth:jwt:grant --clientid ${{ secrets.SFDX_CLIENT_ID }} --jwtkeyfile ${{ secrets.SFDX_PRIVATE_KEY_PATH }} --username ${{ secrets.SFDX_USERNAME }} --instanceurl https://login.salesforce.com
+          sfdx force:auth:jwt:grant \
+            --clientid ${{ secrets.SFDX_CLIENT_ID }} \
+            --jwtkeyfile ${{ secrets.SFDX_PRIVATE_KEY_PATH }} \
+            --username ${{ secrets.SFDX_USERNAME }} \
+            --instanceurl https://login.salesforce.com
 
       - name: Cherry-Pick Commits to Target Branch
         run: |
