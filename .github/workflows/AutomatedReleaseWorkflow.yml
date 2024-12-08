@@ -40,7 +40,10 @@ jobs:
           echo "Generated Release Tag: $VERSION"
           echo "RELEASE_TAG=$VERSION" >> $GITHUB_ENV
       - name: Push Release Tag
+        env:
+          GIT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
+          git remote set-url origin https://${GIT_TOKEN}@github.com/${{ github.repository }}
           if git rev-parse $RELEASE_TAG >/dev/null 2>&1; then
             echo "Tag $RELEASE_TAG already exists. Skipping..."
           else
