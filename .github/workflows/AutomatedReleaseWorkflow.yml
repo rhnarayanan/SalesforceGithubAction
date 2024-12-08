@@ -112,11 +112,18 @@ jobs:
       - name: Authenticate Salesforce Org (JWT)
         run: |
           echo "Authenticating with Salesforce Org..."
+          # Write the private key secret to a temporary file
+          echo "${{ secrets.SFDX_PRIVATE_KEY }}" > private_key.pem
+
+          # Authenticate with Salesforce using the JWT
           sfdx force:auth:jwt:grant \
             --clientid ${{ secrets.SFDX_CLIENT_ID }} \
-            --jwtkeyfile ${{ secrets.SFDX_PRIVATE_KEY_PATH }} \
+            --jwtkeyfile private_key.pem \
             --username ${{ secrets.SFDX_USERNAME }} \
-            --instanceurl "https://login.salesforce.com"
+            --instanceurl https://login.salesforce.com
+
+          # Clean up the private key file after use
+          rm -f private_key.pem
 
       - name: Cherry-Pick Commits to Target Branch
         run: |
