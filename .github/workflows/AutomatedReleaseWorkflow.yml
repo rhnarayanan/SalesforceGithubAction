@@ -116,7 +116,7 @@ jobs:
             --clientid ${{ secrets.SFDX_CLIENT_ID }} \
             --jwtkeyfile ${{ secrets.SFDX_PRIVATE_KEY_PATH }} \
             --username ${{ secrets.SFDX_USERNAME }} \
-            --instanceurl https://login.salesforce.com
+            --instanceurl "https://login.salesforce.com"
 
       - name: Cherry-Pick Commits to Target Branch
         run: |
