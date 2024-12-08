@@ -26,8 +26,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.PAT_TOKEN }} # Use PAT_TOKEN to authenticate
+          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
+
+      - name: Ensure Salesforce CLI is Installed
+        run: |
+          if ! command -v sfdx &> /dev/null; then
+            echo "Salesforce CLI not found. Installing..."
+            npm install --global sfdx-cli
+          else
+            echo "Salesforce CLI is already installed."
+          fi
 
       - name: Configure Git
         run: |
