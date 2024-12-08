@@ -108,23 +108,6 @@ jobs:
             CHERRY_PICK_COMMITS=$(git log ${PREV_TAG}..HEAD --oneline | awk '{print $1}' | tr '\n' ' ')
           fi
           echo "CHERRY_PICK_COMMITS=$CHERRY_PICK_COMMITS" >> $GITHUB_ENV
-
-      - name: Authenticate Salesforce Org (JWT)
-        run: |
-          echo "Authenticating with Salesforce Org..."
-          # Write the private key secret to a temporary file
-          echo "${{ secrets.SFDX_PRIVATE_KEY }}" > private_key.pem
-
-          # Authenticate with Salesforce using the JWT
-          sfdx force:auth:jwt:grant \
-            --clientid ${{ secrets.SFDX_CLIENT_ID }} \
-            --jwtkeyfile private_key.pem \
-            --username ${{ secrets.SFDX_USERNAME }} \
-            --instanceurl https://login.salesforce.com
-
-          # Clean up the private key file after use
-          rm -f private_key.pem
-
       - name: Cherry-Pick Commits to Target Branch
         run: |
           for COMMIT in $CHERRY_PICK_COMMITS; do
@@ -132,7 +115,7 @@ jobs:
           done
           git push origin $BRANCH
 
-      - name: Deploy to Target Environment
+      - name: Deploy to Target Environment (Dummy)
         run: |
           TARGET_ENV="${{ inputs.environment }}"
           if [[ -z "$TARGET_ENV" ]]; then
@@ -140,4 +123,5 @@ jobs:
             exit 1
           fi
           echo "Deploying to $TARGET_ENV..."
-          sfdx force:source:deploy -p ./src -u $TARGET_ENV
+          # Simulating the deployment by echoing the deployment path and environment
+          echo "Simulated deployment to $TARGET_ENV with source path ./src"
