@@ -1,0 +1,91 @@
+name: Automated Release Workflow
+'on':
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Enter release type (patch, minor, major)'
+        required: true
+      environment:
+        description: 'Target environment (dev, st1, st2, prod)'
+        required: true
+      commits:
+        description: Comma-separated list of commit SHAs to cherry-pick (optional)
+        required: false
+env:
+  DEV_BRANCH: dev
+  ST_BRANCH_PREFIX: st
+  PROD_BRANCH: main
+jobs:
+  release-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Configure Git
+        run: |
+          git config --global user.name "Your Name"
+          git config --global user.email "your.email@example.com"
+      - name: Generate Release Tag
+        id: generate_tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 || echo "0.0.0")
+          case "${{ inputs.release_type }}" in
+            patch) VERSION=$(echo $LAST_TAG | awk -F. '{print $1 "." $2 "." $3+1}') ;;
+            minor) VERSION=$(echo $LAST_TAG | awk -F. '{print $1 "." $2+1 ".0"}') ;;
+            major) VERSION=$(echo $LAST_TAG | awk -F. '{print $1+1 ".0.0"}') ;;
+            *) echo "Invalid release type"; exit 1 ;;
+          esac
+          echo "Generated Release Tag: $VERSION"
+          echo "RELEASE_TAG=$VERSION" >> $GITHUB_ENV
+      - name: Push Release Tag
+        run: |
+          if git rev-parse $RELEASE_TAG >/dev/null 2>&1; then
+            echo "Tag $RELEASE_TAG already exists. Skipping..."
+          else
+            git tag $RELEASE_TAG
+            git push origin $RELEASE_TAG
+          fi
+      - name: Determine Target Branch
+        run: |
+          case "${{ inputs.environment }}" in
+            dev) BRANCH="${{ env.DEV_BRANCH }}" ;;
+            st*) BRANCH="${{ inputs.environment }}" ;;
+            prod) BRANCH="${{ env.PROD_BRANCH }}" ;;
+            *) echo "Invalid environment"; exit 1 ;;
+          esac
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+      - name: Checkout or Create Target Branch
+        run: |
+          BRANCH=${{ env.BRANCH }}
+          if git show-ref --verify --quiet refs/heads/$BRANCH; then
+            git checkout $BRANCH
+          else
+            git checkout -b $BRANCH --track origin/$BRANCH || git checkout -b $BRANCH
+          fi
+      - name: Collect Commits for Cherry-Picking
+        id: collect_commits
+        run: |
+          if [ -n "${{ inputs.commits }}" ]; then
+            CHERRY_PICK_COMMITS=$(echo "${{ inputs.commits }}" | tr ',' ' ')
+          else
+            PREV_TAG=$(git describe --tags --abbrev=0 || echo "0.0.0")
+            CHERRY_PICK_COMMITS=$(git log ${PREV_TAG}..HEAD --oneline | awk '{print $1}' | tr '\n' ' ')
+          fi
+          echo "CHERRY_PICK_COMMITS=$CHERRY_PICK_COMMITS" >> $GITHUB_ENV
+      - name: Cherry-Pick Commits to Target Branch
+        run: |
+          for COMMIT in $CHERRY_PICK_COMMITS; do
+            git cherry-pick $COMMIT || (git add . && git cherry-pick --continue || git cherry-pick --skip)
+          done
+          git push origin $BRANCH
+      - name: Deploy to Target Environment
+        run: |
+          TARGET_ENV="${{ inputs.environment }}"
+          if [[ -z "$TARGET_ENV" ]]; then
+            echo "No target environment provided. Exiting."
+            exit 1
+          fi
+          echo "Deploying to $TARGET_ENV..."
+          sfdx force:source:deploy -p ./src -u $TARGET_ENV
