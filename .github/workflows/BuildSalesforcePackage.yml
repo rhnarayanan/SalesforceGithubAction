@@ -14,10 +14,10 @@ jobs:
           npm install sfdx-cli --global
       - name: Validate Metadata
         run: |
-          sfdx force:mdapi:validate -d ./src -u test-org-alias
+          sfdx force:mdapi:validate -d ./EmployeeManagementApp/src -u test-org-alias
       - name: Package Metadata
         run: |
-          zip -r salesforce-package.zip ./src ./manifest || true
+          zip -r salesforce-package.zip ./EmployeeManagementApp/src ./EmployeeManagementApp/manifest || true
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
