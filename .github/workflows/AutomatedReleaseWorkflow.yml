@@ -89,15 +89,6 @@ jobs:
           esac
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
-      - name: Pre-Run Validation
-        run: |
-          git fetch origin ${{ env.BRANCH }}
-          if ! git diff origin/${{ env.BRANCH }} --quiet; then
-            echo "Potential conflicts detected. Proceeding with caution..."
-          else
-            echo "No potential conflicts detected."
-          fi
-
       - name: Checkout or Create Target Branch
         run: |
           BRANCH=${{ env.BRANCH }}
@@ -107,16 +98,28 @@ jobs:
             git checkout -b $BRANCH --track origin/$BRANCH || git checkout -b $BRANCH
           fi
 
-      - name: Pull Latest Changes (Robust Version)
+      - name: Pull Latest Changes (Enhanced Robust Version)
         run: |
           set -e
+          echo "Stashing untracked changes..."
           git stash --include-untracked
+
+          echo "Fetching latest changes from $BRANCH..."
           git fetch origin $BRANCH
+
+          echo "Attempting to rebase onto latest $BRANCH..."
           git rebase origin/$BRANCH || (
-            echo "Rebase failed. Attempting automatic conflict resolution..." &&
-            git merge --strategy-option=theirs --no-edit origin/$BRANCH ||
-            (echo "Automatic merge failed. Aborting." && git rebase --abort && exit 1)
+            echo "Rebase failed. Attempting conflict resolution using merge..." &&
+            git merge --strategy-option=theirs --no-edit origin/$BRANCH || (
+              echo "Automatic merge failed. Performing manual conflict resolution..." &&
+              git merge --abort &&
+              git reset --hard origin/$BRANCH &&
+              echo "Fallback: Reset branch to match remote." &&
+              exit 1
+            )
           )
+
+          echo "Restoring stashed changes..."
           git stash pop || echo "No changes to pop from stash"
 
       - name: Collect Commits for Cherry-Picking
