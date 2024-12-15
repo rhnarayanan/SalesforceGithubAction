@@ -109,14 +109,14 @@ jobs:
 
       - name: Pull Latest Changes (Robust Version)
         run: |
+          set -e
           git stash --include-untracked
           git fetch origin $BRANCH
-          git rebase origin/$BRANCH || (echo "Rebase failed. Attempting to resolve conflicts automatically..." &&
-            git merge --strategy-option theirs --no-edit || 
-            echo "Merge conflict resolution failed. Aborting rebase..." &&
-            git rebase --abort && 
-            echo "Retrying with manual merge..." &&
-            git merge origin/$BRANCH --no-edit)
+          git rebase origin/$BRANCH || (
+            echo "Rebase failed. Attempting automatic conflict resolution..." &&
+            git merge --strategy-option=theirs --no-edit origin/$BRANCH ||
+            (echo "Automatic merge failed. Aborting." && git rebase --abort && exit 1)
+          )
           git stash pop || echo "No changes to pop from stash"
 
       - name: Collect Commits for Cherry-Picking
