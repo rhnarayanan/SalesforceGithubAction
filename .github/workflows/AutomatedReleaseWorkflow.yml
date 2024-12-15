@@ -89,6 +89,15 @@ jobs:
           esac
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
+      - name: Pre-Run Validation
+        run: |
+          git fetch origin ${{ env.BRANCH }}
+          if ! git diff origin/${{ env.BRANCH }} --quiet; then
+            echo "Potential conflicts detected. Proceeding with caution..."
+          else
+            echo "No potential conflicts detected."
+          fi
+
       - name: Checkout or Create Target Branch
         run: |
           BRANCH=${{ env.BRANCH }}
@@ -98,13 +107,11 @@ jobs:
             git checkout -b $BRANCH --track origin/$BRANCH || git checkout -b $BRANCH
           fi
 
-      - name: Pull Latest Changes (to avoid non-fast-forward error)
+      - name: Pull Latest Changes (Robust Version)
         run: |
-          # Stash untracked files to avoid conflicts during rebase
           git stash --include-untracked
           git fetch origin $BRANCH
-          git rebase origin/$BRANCH || (git merge --strategy-option theirs && git commit --no-edit)
-          # Pop the stash after the rebase
+          git rebase origin/$BRANCH || (git merge origin/$BRANCH --strategy-option theirs --no-edit)
           git stash pop || echo "No changes to pop from stash"
 
       - name: Collect Commits for Cherry-Picking
@@ -121,7 +128,7 @@ jobs:
       - name: Cherry-Pick Commits to Target Branch
         run: |
           for COMMIT in $CHERRY_PICK_COMMITS; do
-            git cherry-pick $COMMIT || (git add . && git cherry-pick --continue || git cherry-pick --skip)
+            git cherry-pick $COMMIT || (echo "Skipping $COMMIT due to conflict" && git cherry-pick --skip)
           done
           git push origin $BRANCH
 
@@ -133,5 +140,4 @@ jobs:
             exit 1
           fi
           echo "Deploying to $TARGET_ENV..."
-          # Simulating the deployment by echoing the deployment path and environment
           echo "Simulated deployment to $TARGET_ENV with source path ./src"
